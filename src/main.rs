@@ -7,7 +7,7 @@ use hippodrome::{HippodromeDnsRacer, RaceConfig};
 use std::time::{Duration, Instant};
 
 #[derive(Parser)]
-#[command(name = "hippodrome", version = "0.1.0", author = "Rick Walker <xuoxod@gmail.com>")]
+#[command(name = "hippodrome", version = "0.1.0", author = "Rick Walker <rick@rmediatech.com>")]
 #[command(about = "Sovereign Speculative Hedged Racing & Upstream Tournament Engine")]
 struct Cli {
     #[command(subcommand)]

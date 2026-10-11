@@ -2,7 +2,7 @@
 name = "hippodrome"
 version = "0.1.0"
 edition = "2021"
-authors = ["Rick Walker <xuoxod@gmail.com>"]
+authors = ["Rick Walker <rick@rmediatech.com>"]
 license = "MIT OR Apache-2.0"
 description = "Sovereign speculative hedged racing & upstream tournament engine in pure Rust. Replaces naive round-robin with microsecond fastest-horse concurrency."
 repository = "https://github.com/xuoxod/hippodrome"

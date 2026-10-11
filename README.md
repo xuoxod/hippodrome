@@ -3,7 +3,7 @@
 > **Classification:** SOVEREIGN CONFIDENTIAL / OPEN ARCHITECTURE  
 > **Sovereign Fleet Role:** Speculative Hedged Racing & Upstream Tournament Engine  
 > **Standard:** `AGY-RULE-SOVEREIGN-FLAGSHIP-01` & `AGY-RULE-SOVEREIGN-SECURITY-01`  
-> **Master Release Key:** `4E428019A109578B` (`Rick Walker <xuoxod@gmail.com>`)  
+> **Master Release Key:** `4E428019A109578B` (`Rick Walker <rick@rmediatech.com>`)  
 > **Operational Anthem:** *"From the wire to the RAM / 'Til the kernel drops that spam! / All them botnets crash and slam / Got that sovereign shield, GOD DAMN!"*  
 > **Architects' Credo:** *"Real recognizes real, brother. No thanks needed between architects in the trenches."*  
 
@@ -78,6 +78,6 @@ Empirical verification executed across the sovereign fleet (Linux Node, Windows 
 ## 📜 Sovereign Cryptographic Provenance (`SOVEREIGN-SIGN-01`)
 
 Every compiled binary is built as a static Musl binary and verified against Rick Walker's Sovereign Master Key:
-- **Signer:** `Rick Walker (Sovereign Release Signing Key) <xuoxod@gmail.com>`
+- **Signer:** `Rick Walker (Sovereign Release Signing Key) <rick@rmediatech.com>`
 - **Key ID:** `4E428019A109578B`
 - **Fingerprint:** `6BC8 DA5E 7F1B 8B49 BE5C D70A 4E42 8019 A109 578B`
