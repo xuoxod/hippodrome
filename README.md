@@ -77,7 +77,7 @@ Empirical verification executed across the sovereign fleet (Linux Node, Windows 
 
 ## 📜 Sovereign Cryptographic Provenance (`SOVEREIGN-SIGN-01`)
 
-Every compiled binary is built as a static Musl binary and verified against Rick Walker's Sovereign Master Key:
-- **Signer:** `Rick Walker (Sovereign Release Signing Key) <rick@rmediatech.com>`
+Every compiled binary is built as a static Musl binary and cryptographically signed under the authoritative RMediaTech Sovereign Release Signing Key:
+- **Signer:** `RMediaTech LLC (Sovereign Release Signing Key) <rick@rmediatech.com>`
 - **Key ID:** `4E428019A109578B`
 - **Fingerprint:** `6BC8 DA5E 7F1B 8B49 BE5C D70A 4E42 8019 A109 578B`
