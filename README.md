@@ -58,7 +58,7 @@ Traditional DNS resolvers and reverse proxies suffer from severe **tail latency*
 
 ## 🚀 Performance & Benchmark
 
-Empirical verification executed across the sovereign fleet (Linux VM, Windows Server 2022 VM, CrunchBang Laptop `xua`, and Workstation `xuoux`):
+Empirical verification executed across the sovereign fleet (Linux Node, Windows Server 2022 Node, Portable Edge Node, and Primary Workstation):
 
 ```text
 🐎 HIPPODROME VS NAIVE ROUND-ROBIN BENCHMARK
