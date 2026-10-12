@@ -49,10 +49,26 @@ Traditional DNS resolvers and reverse proxies suffer from severe **tail latency*
 | **`src/main.rs`** | Thin CLI Lifecycle Shell | Strict **$\le 80$ lines** invariant; zero inline business logic. |
 | **`hippodrome::steed`** | Contender Entity | Encapsulates endpoint identities, operational state, and dynamic weights. |
 | **`hippodrome::tournament`** | Tournament Arena & Standings | Manages dynamic rank sorting, EWMA latency tracking, and selection. |
-| **`hippodrome::hedged`** | Hedged Request Executor | Asynchronous Tokio speculative racing engine with microsecond timers. |
+| **`hippodrome::hedged`** | Hedged Request Executor | Asynchronous Tokio speculative racing engine with adaptive EWMA microsecond delays. |
 | **`hippodrome::scoreboard`** | Adaptive Circuit Breaker | Trips failing upstreams, auto-heals upon recovery, tracks telemetry. |
+| **`hippodrome::health`** | Proactive Health Sentinel | Actively sweeps tripped circuits via TCP connect probes, auto-reinstating healthy upstreams. |
 | **`hippodrome::hygiene`** | Wire & Protocol Sanitizer | Verifies transaction IDs, sanitizes malformed responses. |
 | **`hippodrome::dns_adapter`** | `HippodromeDnsRacer` | High-performance UDP wire runner natively embedded into `aegis`. |
+| **`hippodrome::http_adapter`** | `HippodromeHttpRacer` | L7 method-aware speculative racer embedded into `propylea` (idempotent hedging vs mutating single-flight). |
+
+---
+
+## ⚡ Adaptive Speculative Racing & L7 Safety Invariants
+
+1. **Adaptive Hedged Concurrency**:
+   Instead of static delay timers, `hippodrome` dynamically computes hedged dispatch delays as `ewma_micros * ewma_multiplier` (bounded between `min_hedged_delay` and `max_hedged_delay`). Fast upstreams trigger instant hedging if they unexpectedly stall; naturally slower networks avoid wasteful duplicate dispatches.
+
+2. **Proactive Health Probing Sentinel**:
+   When consecutive upstream failures trip a steed into `Open` state, `HealthProbeGuard` asynchronously launches background TCP connect probes. The moment an upstream recovers, its circuit resets to `Closed` immediately, restoring capacity without penalizing live client requests.
+
+3. **Strict L7 HTTP Idempotency Policy**:
+   - **Idempotent requests (`GET`, `HEAD`, `OPTIONS`, `TRACE`)**: Dispatched via speculative hedged racing across top-ranked upstreams to obliterate tail latency.
+   - **Mutating requests (`POST`, `PUT`, `DELETE`, `PATCH`)**: Enforce single-flight dispatch with fast circuit-breaker failover, mathematically guaranteeing zero duplicate database writes or double charges.
 
 ---
 
