@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 pub struct Steed {
     /// Unique identifier for this upstream (e.g. "quad9", "google", "local-gw").
     pub id: String,
-    /// Network address and port (e.g. "1.1.1.1:53" or "http://node1:8080").
+    /// Network address and port (e.g. "1.1.1.1:53" or "http://upstream-1:8080").
     pub endpoint: String,
     /// Priority weight (higher means favored when latencies are equal).
     pub weight: u32,
