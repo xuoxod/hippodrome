@@ -117,9 +117,16 @@ impl HippodromeHttpRacer {
 
         let primary = contenders[0].clone();
         let secondary = contenders.get(1).cloned();
+        let hard_timeout = self.tournament.config().hard_timeout;
 
         let start = std::time::Instant::now();
-        let primary_res = runner(primary.clone()).await;
+        let primary_res = match tokio::time::timeout(hard_timeout, runner(primary.clone())).await {
+            Ok(res) => res,
+            Err(_) => Err(HippodromeError::Timeout {
+                endpoint: primary.endpoint.clone(),
+                timeout_ms: hard_timeout.as_millis() as u64,
+            }),
+        };
 
         match primary_res {
             Ok(val) => {
@@ -143,7 +150,15 @@ impl HippodromeHttpRacer {
                 // If primary failed and we have a secondary, attempt fallback
                 if let Some(sec) = secondary {
                     let sec_start = std::time::Instant::now();
-                    match runner(sec.clone()).await {
+                    let sec_res = match tokio::time::timeout(hard_timeout, runner(sec.clone())).await {
+                        Ok(res) => res,
+                        Err(_) => Err(HippodromeError::Timeout {
+                            endpoint: sec.endpoint.clone(),
+                            timeout_ms: hard_timeout.as_millis() as u64,
+                        }),
+                    };
+
+                    match sec_res {
                         Ok(sec_val) => {
                             let sec_elapsed_us = sec_start.elapsed().as_micros() as u64;
                             if let Some(entry) = self.tournament.scoreboard(&sec.id) {

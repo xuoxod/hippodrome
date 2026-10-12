@@ -136,3 +136,69 @@ async fn test_mutating_post_fails_over_to_backup_on_primary_error() {
     assert_eq!(res.value, "BACKUP_SAVED");
     assert_eq!(res.winner.id, "healthy-backup");
 }
+
+#[tokio::test]
+async fn test_mutating_post_times_out_and_fails_over_when_primary_hangs() {
+    let tournament = HippodromeTournament::new(RaceConfig {
+        hard_timeout: Duration::from_millis(30),
+        ..RaceConfig::default()
+    });
+    tournament.register(Steed::new("hung-primary", "127.0.0.1:8001"));
+    tournament.register(Steed::new("swift-backup", "127.0.0.1:8002"));
+
+    let racer = HippodromeHttpRacer::new(tournament);
+
+    let start = std::time::Instant::now();
+    let res = racer
+        .dispatch("POST", |steed| async move {
+            if steed.id == "hung-primary" {
+                // Adversarial hang / Slowloris simulation
+                tokio::time::sleep(Duration::from_millis(2000)).await;
+                Ok("SHOULD_NEVER_REACH".to_string())
+            } else {
+                tokio::time::sleep(Duration::from_millis(5)).await;
+                Ok("RESCUED_BY_BACKUP".to_string())
+            }
+        })
+        .await
+        .expect("Hung primary must time out and fail over to swift backup");
+
+    let elapsed = start.elapsed();
+    assert_eq!(res.value, "RESCUED_BY_BACKUP");
+    assert_eq!(res.winner.id, "swift-backup");
+    assert!(
+        elapsed < Duration::from_millis(150),
+        "Expected timeout failover under 150ms, took {:?}",
+        elapsed
+    );
+}
+
+#[tokio::test]
+async fn test_mutating_post_fails_cleanly_when_all_upstreams_hang() {
+    let tournament = HippodromeTournament::new(RaceConfig {
+        hard_timeout: Duration::from_millis(25),
+        ..RaceConfig::default()
+    });
+    tournament.register(Steed::new("hung-a", "127.0.0.1:8001"));
+    tournament.register(Steed::new("hung-b", "127.0.0.1:8002"));
+
+    let racer = HippodromeHttpRacer::new(tournament);
+
+    let start = std::time::Instant::now();
+    let err = racer
+        .dispatch("POST", |_steed| async move {
+            tokio::time::sleep(Duration::from_millis(1000)).await;
+            Ok("UNREACHABLE".to_string())
+        })
+        .await
+        .expect_err("All hung upstreams must return clean timeout error");
+
+    let elapsed = start.elapsed();
+    assert!(matches!(err, hippodrome::HippodromeError::Timeout { .. }));
+    assert!(
+        elapsed < Duration::from_millis(150),
+        "Expected bounded timeout under 150ms, took {:?}",
+        elapsed
+    );
+}
+
