@@ -32,6 +32,15 @@ pub struct HippodromeTournament {
     config: RaceConfig,
 }
 
+impl std::fmt::Debug for HippodromeTournament {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HippodromeTournament")
+            .field("config", &self.config)
+            .field("steed_count", &self.steeds.read().len())
+            .finish()
+    }
+}
+
 impl HippodromeTournament {
     /// Construct a new empty tournament with specified race configuration.
     pub fn new(config: RaceConfig) -> Self {

@@ -51,7 +51,7 @@ pub struct HttpRaceResult<T> {
 }
 
 /// High-level HTTP reverse proxy speculative racer.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct HippodromeHttpRacer {
     tournament: HippodromeTournament,
 }
