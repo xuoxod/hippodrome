@@ -4,7 +4,7 @@
 //! EWMA and sovereign hygiene scoring, and drives speculative tournament races.
 
 use crate::error::HippodromeError;
-use crate::hedged::{execute_hedged_race, RaceConfig, RaceOutcome};
+use crate::hedged::{RaceConfig, RaceOutcome};
 use crate::hygiene::{HygieneInfraction, HygieneLedger, HygieneTelemetry};
 use crate::scoreboard::{current_epoch_ms, ScoreboardEntry, SteedTelemetry};
 use crate::steed::Steed;
@@ -56,7 +56,8 @@ impl HippodromeTournament {
             .or_insert_with(|| Arc::new(ScoreboardEntry::new(3, 30_000, 20)));
 
         let mut hy = self.hygiene_ledgers.write();
-        hy.entry(id).or_insert_with(|| Arc::new(HygieneLedger::new()));
+        hy.entry(id)
+            .or_insert_with(|| Arc::new(HygieneLedger::new()));
     }
 
     /// Retrieve eligible contenders ranked by lowest effective latency.
@@ -102,7 +103,22 @@ impl HippodromeTournament {
         let primary = contenders[0].clone();
         let secondary = contenders.get(1).cloned();
 
-        let outcome = execute_hedged_race(primary.clone(), secondary.clone(), self.config, runner).await;
+        let primary_ewma = self
+            .scoreboards
+            .read()
+            .get(&primary.id)
+            .map(|e| e.ewma_micros())
+            .unwrap_or(10_000);
+        let dynamic_delay = self.config.compute_hedged_delay(primary_ewma);
+
+        let outcome = crate::hedged::execute_hedged_race_with_delay(
+            primary.clone(),
+            secondary.clone(),
+            dynamic_delay,
+            self.config.hard_timeout,
+            runner,
+        )
+        .await;
 
         match outcome {
             Ok(res) => {
@@ -154,5 +170,25 @@ impl HippodromeTournament {
                 })
             })
             .collect()
+    }
+
+    /// Retrieve the tournament's race configuration.
+    pub fn config(&self) -> RaceConfig {
+        self.config
+    }
+
+    /// Retrieve a snapshot of all registered steeds.
+    pub fn steeds(&self) -> Vec<Steed> {
+        self.steeds.read().clone()
+    }
+
+    /// Retrieve the scoreboard entry for a specific steed.
+    pub fn scoreboard(&self, steed_id: &str) -> Option<Arc<ScoreboardEntry>> {
+        self.scoreboards.read().get(steed_id).cloned()
+    }
+
+    /// Retrieve a snapshot mapping of all scoreboard entries.
+    pub fn scoreboards(&self) -> HashMap<String, Arc<ScoreboardEntry>> {
+        self.scoreboards.read().clone()
     }
 }

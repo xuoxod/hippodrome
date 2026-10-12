@@ -3,9 +3,9 @@
 //! High-performance lock-free latency tracking with Exponentially-Weighted
 //! Moving Average (EWMA) and autonomous circuit breaker isolation.
 
-use std::sync::atomic::{AtomicU64, AtomicU32, Ordering};
-use std::time::{SystemTime, UNIX_EPOCH};
 use serde::Serialize;
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Circuit breaker operational state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -123,6 +123,12 @@ impl ScoreboardEntry {
             let now_ms = current_epoch_ms();
             self.circuit_opened_at_ms.store(now_ms, Ordering::Release);
         }
+    }
+
+    /// Explicitly reset circuit breaker state, marking steed healthy.
+    pub fn reset_circuit(&self) {
+        self.consecutive_failures.store(0, Ordering::Relaxed);
+        self.circuit_opened_at_ms.store(0, Ordering::Release);
     }
 
     /// Determine if this steed is eligible to race right now.

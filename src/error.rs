@@ -22,10 +22,7 @@ pub enum HippodromeError {
 
     /// Upstream network timeout occurred during the race.
     #[error("Upstream {endpoint} timed out after {timeout_ms}ms")]
-    Timeout {
-        endpoint: String,
-        timeout_ms: u64,
-    },
+    Timeout { endpoint: String, timeout_ms: u64 },
 
     /// Corrupted or invalid payload received from upstream.
     #[error("Invalid or poisoned payload received from {0}: {1}")]

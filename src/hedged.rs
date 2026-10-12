@@ -26,10 +26,18 @@ pub struct RaceOutcome<T> {
 /// Configuration options governing hedged racing execution.
 #[derive(Debug, Clone, Copy)]
 pub struct RaceConfig {
-    /// Delay before dispatching the speculative secondary steed (default: 10ms).
+    /// Base delay before dispatching the speculative secondary steed (default: 10ms).
     pub hedged_delay: Duration,
     /// Hard deadline ceiling for the entire race before timing out (default: 2000ms).
     pub hard_timeout: Duration,
+    /// Whether to dynamically calculate hedged delay from primary steed EWMA.
+    pub adaptive: bool,
+    /// EWMA multiplier when adaptive is active (default: 1.25).
+    pub ewma_multiplier: f64,
+    /// Minimum floor for hedged delay (default: 2ms).
+    pub min_hedged_delay: Duration,
+    /// Maximum ceiling for hedged delay (default: 50ms).
+    pub max_hedged_delay: Duration,
 }
 
 impl Default for RaceConfig {
@@ -37,15 +45,54 @@ impl Default for RaceConfig {
         Self {
             hedged_delay: Duration::from_millis(10),
             hard_timeout: Duration::from_millis(2000),
+            adaptive: true,
+            ewma_multiplier: 1.25,
+            min_hedged_delay: Duration::from_millis(2),
+            max_hedged_delay: Duration::from_millis(50),
         }
     }
 }
 
-/// Execute a speculative hedged race across two selected steeds (Primary & Secondary).
+impl RaceConfig {
+    /// Calculate effective hedged delay given the primary contender's EWMA in microseconds.
+    pub fn compute_hedged_delay(&self, ewma_micros: u64) -> Duration {
+        if !self.adaptive || ewma_micros == 0 {
+            return self.hedged_delay;
+        }
+        let dynamic_micros = (ewma_micros as f64 * self.ewma_multiplier) as u64;
+        let dynamic_dur = Duration::from_micros(dynamic_micros);
+        dynamic_dur.clamp(self.min_hedged_delay, self.max_hedged_delay)
+    }
+}
+
+/// Execute a speculative hedged race across two selected steeds using default config delay.
 pub async fn execute_hedged_race<T, F, Fut>(
     primary: Steed,
     secondary: Option<Steed>,
     config: RaceConfig,
+    runner: F,
+) -> Result<RaceOutcome<T>, HippodromeError>
+where
+    F: Fn(Steed) -> Fut + Send + Sync + 'static,
+    Fut: Future<Output = Result<T, HippodromeError>> + Send + 'static,
+    T: Send + 'static,
+{
+    execute_hedged_race_with_delay(
+        primary,
+        secondary,
+        config.hedged_delay,
+        config.hard_timeout,
+        runner,
+    )
+    .await
+}
+
+/// Execute a speculative hedged race with explicitly computed hedged delay.
+pub async fn execute_hedged_race_with_delay<T, F, Fut>(
+    primary: Steed,
+    secondary: Option<Steed>,
+    hedged_delay: Duration,
+    hard_timeout: Duration,
     runner: F,
 ) -> Result<RaceOutcome<T>, HippodromeError>
 where
@@ -68,7 +115,7 @@ where
     let mut primary_failed = false;
 
     // 2. Wait up to hedged_delay for primary to finish
-    let hedged_timer = tokio::time::sleep(config.hedged_delay);
+    let hedged_timer = tokio::time::sleep(hedged_delay);
     tokio::pin!(hedged_timer);
 
     tokio::select! {
@@ -99,7 +146,7 @@ where
             if primary_failed {
                 return Err(HippodromeError::AllSteedsFailed);
             }
-            let remaining = config.hard_timeout.saturating_sub(start_instant.elapsed());
+            let remaining = hard_timeout.saturating_sub(start_instant.elapsed());
             return match tokio::time::timeout(remaining, primary_handle).await {
                 Ok(Ok((Ok(val), elapsed))) => Ok(RaceOutcome {
                     value: val,
@@ -122,7 +169,7 @@ where
     });
 
     // 5. Speculative Race: Whichever steed returns valid response first wins!
-    let total_remaining = config.hard_timeout.saturating_sub(start_instant.elapsed());
+    let total_remaining = hard_timeout.saturating_sub(start_instant.elapsed());
     let race_deadline = tokio::time::sleep(total_remaining);
     tokio::pin!(race_deadline);
 
@@ -167,7 +214,7 @@ where
                 secondary_handle.abort();
                 return Err(HippodromeError::Timeout {
                     endpoint: format!("{} / {}", primary.endpoint, secondary_steed.endpoint),
-                    timeout_ms: config.hard_timeout.as_millis() as u64,
+                    timeout_ms: hard_timeout.as_millis() as u64,
                 });
             }
         }

@@ -16,6 +16,7 @@ async fn test_hippodrome_superiority_over_round_robin() {
     let tournament = HippodromeTournament::new(RaceConfig {
         hedged_delay: Duration::from_millis(10),
         hard_timeout: Duration::from_millis(1000),
+        ..RaceConfig::default()
     });
 
     let steed_a = Steed::new("steed-fast", "10.0.0.1:53");
@@ -75,7 +76,10 @@ async fn test_hippodrome_superiority_over_round_robin() {
     let hippo_p90 = hippodrome_latencies[hippodrome_latencies.len() * 90 / 100];
     let rr_p90 = rr_latencies[rr_latencies.len() * 90 / 100];
 
-    println!("🏆 HIPPODROME P90: {} ms vs ROUND-ROBIN P90: {} ms", hippo_p90, rr_p90);
+    println!(
+        "🏆 HIPPODROME P90: {} ms vs ROUND-ROBIN P90: {} ms",
+        hippo_p90, rr_p90
+    );
 
     // Hippodrome P90 must be <= 10ms while Round-Robin suffers 150ms!
     assert!(hippo_p90 <= 15, "Hippodrome P90 must stay under 15ms");

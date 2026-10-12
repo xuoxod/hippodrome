@@ -4,8 +4,8 @@
 //! and sovereign hygiene demotion under simulated hostile network conditions.
 
 use hippodrome::{
-    execute_hedged_race, CircuitState, HippodromeError, HippodromeTournament,
-    HygieneInfraction, RaceConfig, Steed,
+    execute_hedged_race, CircuitState, HippodromeError, HippodromeTournament, HygieneInfraction,
+    RaceConfig, Steed,
 };
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
@@ -19,6 +19,7 @@ async fn test_fast_primary_wins_before_hedged_delay() {
     let config = RaceConfig {
         hedged_delay: Duration::from_millis(50),
         hard_timeout: Duration::from_millis(1000),
+        ..RaceConfig::default()
     };
 
     let outcome = execute_hedged_race(primary.clone(), secondary, config, |steed| async move {
@@ -35,7 +36,10 @@ async fn test_fast_primary_wins_before_hedged_delay() {
 
     assert_eq!(outcome.value, "FAST_PACKET");
     assert_eq!(outcome.winner.id, "fast-horse");
-    assert!(!outcome.was_hedged, "Should not be hedged since primary finished in 5ms < 50ms");
+    assert!(
+        !outcome.was_hedged,
+        "Should not be hedged since primary finished in 5ms < 50ms"
+    );
 }
 
 #[tokio::test]
@@ -46,6 +50,7 @@ async fn test_stalled_primary_beaten_by_speculative_secondary() {
     let config = RaceConfig {
         hedged_delay: Duration::from_millis(10), // Hedged trigger after 10ms
         hard_timeout: Duration::from_millis(1000),
+        ..RaceConfig::default()
     };
 
     let outcome = execute_hedged_race(primary, secondary, config, |steed| async move {
@@ -66,7 +71,10 @@ async fn test_stalled_primary_beaten_by_speculative_secondary() {
     assert_eq!(outcome.winner.id, "swift-backup");
     assert!(outcome.was_hedged, "Race was won via speculative hedging!");
     // Total latency was hedged_delay (10ms) + secondary execution (~5ms) = ~15ms, NOT 500ms!
-    assert!(outcome.rtt_micros < 100_000, "Measured RTT must be under 100ms");
+    assert!(
+        outcome.rtt_micros < 100_000,
+        "Measured RTT must be under 100ms"
+    );
 }
 
 #[tokio::test]
@@ -96,13 +104,19 @@ async fn test_circuit_breaker_trips_after_consecutive_failures() {
 
     // Verify circuit breaker tripped to Open
     let report = tournament.report();
-    let entry = report.iter().find(|r| r.steed.id == "flaky-upstream").unwrap();
+    let entry = report
+        .iter()
+        .find(|r| r.steed.id == "flaky-upstream")
+        .unwrap();
     assert_eq!(entry.scoreboard.circuit_state, CircuitState::Open);
     assert_eq!(entry.scoreboard.consecutive_failures, 3);
 
     // Verify flaky upstream is excluded from subsequent races
     let eligible = tournament.rank_contenders();
-    assert!(!eligible.iter().any(|s| s.id == "flaky-upstream"), "Tripped steed must be excluded");
+    assert!(
+        !eligible.iter().any(|s| s.id == "flaky-upstream"),
+        "Tripped steed must be excluded"
+    );
 }
 
 #[tokio::test]
@@ -124,13 +138,19 @@ async fn test_hygiene_infraction_demotes_untrusted_upstream() {
     tournament.report_infraction("rogue-dns", HygieneInfraction::DnsRebindingAttempt);
 
     let post_report = tournament.report();
-    let rogue_post = post_report.iter().find(|r| r.steed.id == "rogue-dns").unwrap();
+    let rogue_post = post_report
+        .iter()
+        .find(|r| r.steed.id == "rogue-dns")
+        .unwrap();
     assert_eq!(rogue_post.hygiene.trust_score, 50);
     assert_eq!(rogue_post.hygiene.rebinding_violations, 1);
 
     // Assert honest steed is ranked #1 due to virtual latency penalty on rogue
     let ranked = tournament.rank_contenders();
-    assert_eq!(ranked[0].id, "honest-dns", "Honest steed must take pole position");
+    assert_eq!(
+        ranked[0].id, "honest-dns",
+        "Honest steed must take pole position"
+    );
 }
 
 #[tokio::test]
@@ -141,13 +161,18 @@ async fn test_all_steeds_failed_returns_clean_error_without_panic() {
     let config = RaceConfig {
         hedged_delay: Duration::from_millis(5),
         hard_timeout: Duration::from_millis(50),
+        ..RaceConfig::default()
     };
 
-    let result: Result<hippodrome::RaceOutcome<String>, _> = execute_hedged_race(primary, secondary, config, |steed| async move {
-        tokio::time::sleep(Duration::from_millis(10)).await;
-        Err(HippodromeError::Transport(steed.endpoint, "Connection refused".to_string()))
-    })
-    .await;
+    let result: Result<hippodrome::RaceOutcome<String>, _> =
+        execute_hedged_race(primary, secondary, config, |steed| async move {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+            Err(HippodromeError::Transport(
+                steed.endpoint,
+                "Connection refused".to_string(),
+            ))
+        })
+        .await;
 
     assert!(result.is_err());
     assert_eq!(result.unwrap_err(), HippodromeError::AllSteedsFailed);

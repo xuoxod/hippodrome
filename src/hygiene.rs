@@ -3,8 +3,8 @@
 //! Evaluates upstream veracity, integrity, and hygiene compliance. Upstreams
 //! returning poisoned, rebinding, or cloaked records receive trust penalties.
 
-use std::sync::atomic::{AtomicI32, Ordering};
 use serde::Serialize;
+use std::sync::atomic::{AtomicI32, Ordering};
 
 /// Types of hygiene infractions detected on the wire.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

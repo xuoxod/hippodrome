@@ -7,7 +7,11 @@ use hippodrome::{HippodromeDnsRacer, RaceConfig};
 use std::time::{Duration, Instant};
 
 #[derive(Parser)]
-#[command(name = "hippodrome", version = "0.1.0", author = "Rick Walker <rick@rmediatech.com>")]
+#[command(
+    name = "hippodrome",
+    version = "0.1.0",
+    author = "Rick Walker <rick@rmediatech.com>"
+)]
 #[command(about = "Sovereign Speculative Hedged Racing & Upstream Tournament Engine")]
 struct Cli {
     #[command(subcommand)]
@@ -51,7 +55,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Race { domain, upstreams, hedged_ms } => {
+        Commands::Race {
+            domain,
+            upstreams,
+            hedged_ms,
+        } => {
             println!("🐎 HIPPODROME SPECULATIVE TOURNAMENT RACE");
             println!("🎯 Target Domain : {}", domain);
             println!("⚡ Hedged Delay  : {}ms", hedged_ms);
@@ -60,6 +68,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let config = RaceConfig {
                 hedged_delay: Duration::from_millis(hedged_ms),
                 hard_timeout: Duration::from_millis(2000),
+                ..RaceConfig::default()
             };
 
             let racer = HippodromeDnsRacer::new(upstream_list, config);
@@ -70,10 +79,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Ok(outcome) => {
                     let total_elapsed = t0.elapsed();
                     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-                    println!("🏆 RACE WINNER     : {} ({})", outcome.winner.id, outcome.winner.endpoint);
-                    println!("⏱️  Measured RTT    : {} µs ({:.2} ms)", outcome.rtt_micros, outcome.rtt_micros as f64 / 1000.0);
-                    println!("⚡ Total Execution : {:.2} ms", total_elapsed.as_secs_f64() * 1000.0);
-                    println!("🏇 Speculative Win : {}", if outcome.was_hedged { "YES (Hedged secondary won)" } else { "NO (Primary won before hedged)" });
+                    println!(
+                        "🏆 RACE WINNER     : {} ({})",
+                        outcome.winner.id, outcome.winner.endpoint
+                    );
+                    println!(
+                        "⏱️  Measured RTT    : {} µs ({:.2} ms)",
+                        outcome.rtt_micros,
+                        outcome.rtt_micros as f64 / 1000.0
+                    );
+                    println!(
+                        "⚡ Total Execution : {:.2} ms",
+                        total_elapsed.as_secs_f64() * 1000.0
+                    );
+                    println!(
+                        "🏇 Speculative Win : {}",
+                        if outcome.was_hedged {
+                            "YES (Hedged secondary won)"
+                        } else {
+                            "NO (Primary won before hedged)"
+                        }
+                    );
                     println!("📦 Response Bytes  : {} bytes", outcome.value.len());
                     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 }
@@ -83,7 +109,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        Commands::Bench { domain, upstreams, count } => {
+        Commands::Bench {
+            domain,
+            upstreams,
+            count,
+        } => {
             println!("🐎 HIPPODROME VS NAIVE ROUND-ROBIN BENCHMARK");
             println!("🎯 Target Domain : {} ({} iterations)", domain, count);
 
@@ -126,7 +156,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let racer = HippodromeDnsRacer::new(upstream_list, RaceConfig::default());
             let reports = racer.tournament().report();
 
-            println!("{:<15} {:<20} {:<12} {:<10} {:<10}", "ID", "ENDPOINT", "EWMA (ms)", "WINS", "CIRCUIT");
+            println!(
+                "{:<15} {:<20} {:<12} {:<10} {:<10}",
+                "ID", "ENDPOINT", "EWMA (ms)", "WINS", "CIRCUIT"
+            );
             println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             for r in reports {
                 println!(

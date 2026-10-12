@@ -32,7 +32,10 @@ impl HippodromeDnsRacer {
     }
 
     /// Race a raw DNS query packet across upstreams.
-    pub async fn race_query(&self, query_packet: Vec<u8>) -> Result<RaceOutcome<Vec<u8>>, HippodromeError> {
+    pub async fn race_query(
+        &self,
+        query_packet: Vec<u8>,
+    ) -> Result<RaceOutcome<Vec<u8>>, HippodromeError> {
         if query_packet.len() < 12 {
             return Err(HippodromeError::InvalidPayload(
                 "client".to_string(),
@@ -46,9 +49,7 @@ impl HippodromeDnsRacer {
         self.tournament
             .race(move |steed: Steed| {
                 let packet = Arc::clone(&packet_arc);
-                async move {
-                    send_udp_dns_query(&steed.endpoint, &packet, expected_tx_id).await
-                }
+                async move { send_udp_dns_query(&steed.endpoint, &packet, expected_tx_id).await }
             })
             .await
     }
