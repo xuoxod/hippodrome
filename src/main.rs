@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 #[derive(Parser)]
 #[command(
     name = "hippodrome",
-    version = "0.1.0",
+    version,
     author = "Rick Walker <rick@rmediatech.com>"
 )]
 #[command(about = "Sovereign Speculative Hedged Racing & Upstream Tournament Engine")]
